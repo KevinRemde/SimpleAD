@@ -1,38 +1,8 @@
-﻿<#
- Deploy the Azure Infrastructure Lab Machines
- Note: Requires the most recent AzureRM commandlets.  If you haven't recently installed the latest, you'd better do it now.
-
- This automation builds:
-
- DC - Domain Controller (contoso.com domain)
- ADMIN - Adminstrative server
- EDGE - dual-homed routing server
- SYNC - server for 
-
- All servers are members of contoso.com
- All machines other than DC contain the downloaded Lab files and scripts.
-
- Yet to do:
- ALL - Automate the unzip and proper placement of the labfiles.
-ADMIN - Automate the installation of RSAT ADUC, Azure PowerShell. (Leave GIT, GitHub Desktop, and VS Code as an exercise)
-EDGE - Automate the istallation of Routing and Remote Access.
-
-.SYNOPSIS 
-   This script is used to create a starting point for the Azure ITPRO Camp lab exercises. 
-   After logging in to your subscription, The script creates globally unique DNS names for the 4 lab machines on which
-   you will perform you lab exercises.  Then the script launches the creation of the 4 lab machines.
-   NOTE: The lab machines will take 30-45 minutes to be fully provisioned.
-.DESCRIPTION | USAGE
-   IMPORTANT: Before running this script, please note that you will be prompted to provide your intitials.
-   These intials are used to determine a unique name for the machine dns names. For these names,
-   you must use all lower case letters or numbers. No hyphens or other characters are allowed.
-      
-#> 
-
+﻿
 # Sign into Azure
 
 Login-AzureRmAccount
-Get-AzureRmSubscription | Select-AzureRmSubscription 
+# Get-AzureRmSubscription | Select-AzureRmSubscription 
 
 # Note:
 # If you have more than one subscription, you may need to comment out the "Get-AzureRmSubscription"
@@ -58,17 +28,17 @@ $loc = Read-Host -Prompt "and then press ENTER."
 
 # Variables 
 
-$rgName = "RG-AZLAB" + $init
+$rgName = "RG-SimpleAD" + $init
 # $deploymentName = $init + "AZLab"  # Not required
 
 # Use these if you want to drive the deployment from local template and parameter files..
 #
-# $localAssets = "D:\GitHub\AZInfraLabBase\"
-# $templateFileLoc = $localAssets + "azuredeploy.json"
+$localAssets = "C:\Code\MyGitHub\SimpleAD\"
+$templateFileLoc = $localAssets + "azuredeploy.json"
 # $parameterFileLoc = $localAssets + "azuredeploy.parameters.json"
 
 # $assetLocation = "https://rawgit.com/KevinRemde/AZInfraLabBase/master/"  Wanted to use this, but sometimes it fails.
-$assetLocation = "https://raw.githubusercontent.com/KevinRemde/AZInfraLabBase/master/"
+$assetLocation = "https://raw.githubusercontent.com/KevinRemde/SimpleAD/master/"
 # If the rawgit.com path is not available, you can try un-commenting the following line instead...
 # $assetLocation = "https://raw.githubusercontent.com/KevinRemde/AZInfraLabBase/master/"
 $templateFileURI  = $assetLocation + "azuredeploy.json"
@@ -94,57 +64,16 @@ while ($uniqueName -eq $false) {
     }
 } 
 	
-$machine = "admin"
-$uniquename = $false
-$counter = 0
-while ($uniqueName -eq $false) {
-    $counter ++
-    $dnsPrefix = "$machine" + "dns" + "$init" + "$counter" 
-    if (Test-AzureRmDnsAvailability -DomainNameLabel $dnsPrefix -Location $loc) {
-        $uniquename = $true
-        $adminDNSVMName = $dnsPrefix
-    }
-} 
-
-$machine = "edge"
-$uniquename = $false
-$counter = 0
-while ($uniqueName -eq $false) {
-    $counter ++
-    $dnsPrefix = "$machine" + "dns" + "$init" + "$counter" 
-    if (Test-AzureRmDnsAvailability -DomainNameLabel $dnsPrefix -Location $loc) {
-        $uniquename = $true
-        $edgeDNSVMName = $dnsPrefix
-    }
-} 
-
-$machine = "sync"
-$uniquename = $false
-$counter = 0
-while ($uniqueName -eq $false) {
-    $counter ++
-    $dnsPrefix = "$machine" + "dns" + "$init" + "$counter" 
-    if (Test-AzureRmDnsAvailability -DomainNameLabel $dnsPrefix -Location $loc) {
-        $uniquename = $true
-        $syncDNSVMName = $dnsPrefix
-    }
-} 
 
 # Populate the parameter object with parameter values for the azuredeploy.json template to use.
 
 $parameterObject = @{
     "location" = "$loc"
     "dcDNSVMName" = $dcDNSVMName 
-#    "dcVMSize" = "Standard_D1"
-    "adminDNSVMName" = $adminDNSVMName 
-#    "adminVMSize" = "Standard_D1"
-    "edgeDNSVMName" = $edgeDNSVMName 
-#    "edgeVMSize" = "Standard_D2"
-    "syncDNSVMName" = $syncDNSVMName 
-#    "syncVMSize" = "Standard_D1"
+    "dcVMSize" = "Standard_D1"
     "domainName" = "contoso.com"
     "domainUserName" = "labAdmin"
-    "domainPassword" = "Passw0rd!"
+#    "domainPassword" = "Passw0rd!"
     "vmUserName" = "labAdmin"
     "vmPassword" = "Passw0rd!"
     "assetLocation" = $assetLocation
@@ -165,10 +94,10 @@ Write-Host "Started at" (Get-Date -format T)
 Write-Host ""
 
 # THIS IS THE MAIN ONE YOU'LL launch to pull the template file from the repository, and use the created parameter object.
-Measure-Command -expression {New-AzureRMResourceGroupDeployment -ResourceGroupName $rgName -TemplateUri $templateFileURI -TemplateParameterObject $parameterObject}
+# Measure-Command -expression {New-AzureRMResourceGroupDeployment -ResourceGroupName $rgName -TemplateUri $templateFileURI -TemplateParameterObject $parameterObject}
 
 # use only if you want to use a local copy of the template file.
-# Measure-Command -expression {New-AzureRMResourceGroupDeployment -ResourceGroupName $rgName -TemplateFile $templateFileLoc -TemplateParameterObject $parameterObject}
+Measure-Command -expression {New-AzureRMResourceGroupDeployment -ResourceGroupName $rgName -TemplateFile $templateFileLoc -TemplateParameterObject $parameterObject}
 
 # use only if you want to use Kevin's default parameters (not recommended)
 # New-AzureRMResourceGroupDeployment -ResourceGroupName $rgName -TemplateUri $templateFileURI -TemplateParameterUri $parameterFileURI
